@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import type { ApiConfig } from "../types";
 import { useConversation } from "../hooks/useConversation";
+import { useResolvedTheme } from "../theme";
 import { submitMessageFeedback } from "../services/api";
 import { MessageBubble } from "./MessageBubble";
 import { LoadingDots } from "./LoadingDots";
@@ -36,61 +37,22 @@ import {
 } from "./ChatWindow.styles";
 
 interface ChatWindowProps extends ApiConfig {
-  primaryColor: string;
-  chatTitle?: string;
-  chatTitleColor?: string;
-  chatSubTitle?: string;
-  chatSubTitleColor?: string;
-  chatDescription?: string;
-  chatDescriptionColor?: string;
-  chatBackgroundColor?: string;
-  fontFamily?: string;
-  aiMessageBackgroundColor?: string;
-  aiMessageTextColor?: string;
-  messageBackgroundColor?: string;
-  buttonBackgroundColor?: string;
-  buttonColor?: string;
-  fullScreenEnabled?: boolean;
   isFullScreen?: boolean;
   onToggleFullScreen?: () => void;
-  shadow?: "none" | "small" | "medium" | "large";
-  textInputPlaceholder?: string;
-  useCustomLogo?: boolean;
-  showConversationManagment?: boolean;
   onClose: () => void;
-  aiIcon?: string;
-  logoUrl?: string;
 }
 
 export function ChatWindow({
   accountId,
   agentSlug,
   apiEndpoint,
-  primaryColor,
-  chatTitle,
-  chatTitleColor,
-  chatSubTitle,
-  chatSubTitleColor,
-  chatDescription,
-  chatDescriptionColor,
-  chatBackgroundColor,
-  fontFamily,
-  aiMessageBackgroundColor,
-  aiMessageTextColor,
-  messageBackgroundColor,
-  buttonBackgroundColor,
-  buttonColor,
-  fullScreenEnabled,
   isFullScreen,
   onToggleFullScreen,
-  shadow,
-  textInputPlaceholder,
-  useCustomLogo,
-  showConversationManagment,
   onClose,
-  aiIcon,
-  logoUrl,
 }: ChatWindowProps) {
+  // Theme aus Context holen
+  const theme = useResolvedTheme();
+
   const [input, setInput] = useState("");
   const [feedbackMessageId, setFeedbackMessageId] = useState<string | null>(
     null
@@ -113,8 +75,8 @@ export function ChatWindow({
     resetConversation,
   } = useConversation({ accountId, agentSlug, apiEndpoint });
 
-  // aiIcon von props nutzen falls vorhanden, sonst von Conversation
-  const effectiveImageUrl = aiIcon || imageUrl;
+  // aiIcon von Theme nutzen falls vorhanden, sonst von Conversation
+  const effectiveImageUrl = theme.assets.aiIcon || imageUrl;
 
   // Feedback Handler
   const handleFeedbackSubmit = useCallback(
@@ -223,31 +185,16 @@ export function ChatWindow({
   const firstMessage = messages.find((m) => m.isWelcome);
   const showSplashScreen = messages.length <= 1 && !isLoading;
 
-  // Effective placeholder - custom or from API or default
+  // Effective placeholder - from theme or API
   const effectivePlaceholder =
-    textInputPlaceholder || inputPlaceholder || "Nachricht eingeben...";
+    theme.input.placeholder || inputPlaceholder || "Nachricht eingeben...";
 
-  // Shadow style based on prop
-  const getShadowStyle = () => {
-    switch (shadow) {
-      case "none":
-        return "none";
-      case "small":
-        return "0 2px 8px rgba(0, 0, 0, 0.1)";
-      case "medium":
-        return "0 4px 12px rgba(0, 0, 0, 0.15)";
-      case "large":
-      default:
-        return "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)";
-    }
-  };
-
-  // Dynamic window style with custom props
+  // Dynamic window style with theme values
   const dynamicWindowStyle: React.CSSProperties = {
     ...windowStyle,
-    backgroundColor: chatBackgroundColor || "white",
-    fontFamily: fontFamily || "ui-sans-serif, system-ui, sans-serif",
-    boxShadow: getShadowStyle(),
+    backgroundColor: theme.window.backgroundColor,
+    fontFamily: theme.window.fontFamily,
+    boxShadow: theme.window.shadow,
     ...(isFullScreen && {
       width: "100vw",
       maxWidth: "100vw",
@@ -263,10 +210,6 @@ export function ChatWindow({
     }),
   };
 
-  // Effective button colors
-  const effectiveButtonBgColor = buttonBackgroundColor || primaryColor;
-  const effectiveButtonColor = buttonColor || "white";
-
   return (
     <div style={dynamicWindowStyle}>
       <div style={chatContainerStyle}>
@@ -274,13 +217,13 @@ export function ChatWindow({
         <div style={topContainerStyle}>
           <div style={headerContainerStyle}>
             {/* Left side: Logo */}
-            {logoUrl && !useCustomLogo && (
-              <img src={logoUrl} alt="Logo" style={logoStyle} />
+            {theme.header.logoUrl && theme.header.showLogo && (
+              <img src={theme.header.logoUrl} alt="Logo" style={logoStyle} />
             )}
 
             {/* Right side: Fullscreen + Close Button */}
             <div style={rightSectionStyle}>
-              {fullScreenEnabled && (
+              {theme.features.fullScreenEnabled && (
                 <button
                   onClick={onToggleFullScreen}
                   style={closeButtonStyle}
@@ -317,27 +260,29 @@ export function ChatWindow({
             </div>
           </div>
 
-          {/* Title Section: chatTitle + chatSubTitle + chatDescription */}
-          {(chatTitle || chatSubTitle || chatDescription) && (
+          {/* Title Section */}
+          {(theme.header.title || theme.header.subtitle || theme.header.description) && (
             <div style={titleSectionStyle}>
-              {chatTitle && (
-                <div style={createTitleStyle(chatTitleColor)}>{chatTitle}</div>
-              )}
-              {chatSubTitle && (
-                <div style={createSubTitleStyle(chatSubTitleColor)}>
-                  {chatSubTitle}
+              {theme.header.title && (
+                <div style={createTitleStyle(theme.header.titleColor)}>
+                  {theme.header.title}
                 </div>
               )}
-              {chatDescription && (
+              {theme.header.subtitle && (
+                <div style={createSubTitleStyle(theme.header.subtitleColor)}>
+                  {theme.header.subtitle}
+                </div>
+              )}
+              {theme.header.description && (
                 <div
                   style={{
                     fontSize: "14px",
                     lineHeight: 1.5,
-                    color: chatDescriptionColor || "#6B7280",
+                    color: theme.header.descriptionColor,
                     marginTop: "8px",
                   }}
                 >
-                  {chatDescription}
+                  {theme.header.description}
                 </div>
               )}
             </div>
@@ -410,15 +355,16 @@ export function ChatWindow({
               <MessageBubble
                 key={message.id}
                 message={message}
-                primaryColor={primaryColor}
+                primaryColor={theme.primaryColor}
                 imageUrl={
                   message.role === "assistant" ? effectiveImageUrl : undefined
                 }
                 conversationId={conversationId || undefined}
                 onFeedbackClick={handleFeedbackClick}
-                aiMessageBackgroundColor={aiMessageBackgroundColor}
-                aiMessageTextColor={aiMessageTextColor}
-                userMessageBackgroundColor={messageBackgroundColor}
+                aiMessageBackgroundColor={theme.messages.ai.backgroundColor}
+                aiMessageTextColor={theme.messages.ai.textColor}
+                userMessageBackgroundColor={theme.messages.user.backgroundColor}
+                userMessageTextColor={theme.messages.user.textColor}
               />
             ))}
 
@@ -450,17 +396,17 @@ export function ChatWindow({
               disabled={isSubmitDisabled}
               style={{
                 ...createSendButtonStyle(
-                  effectiveButtonBgColor,
+                  theme.buttons.primary.backgroundColor,
                   isSubmitDisabled
                 ),
-                color: effectiveButtonColor,
+                color: theme.buttons.primary.textColor,
               }}
               aria-label="Nachricht senden"
             >
               <Icon name="send" size={24} />
             </button>
           </form>
-          {showConversationManagment !== false && (
+          {theme.features.showConversationManagement && (
             <div style={resetButtonContainerStyle}>
               <button
                 type="button"
@@ -489,7 +435,7 @@ export function ChatWindow({
           onClose={handleFeedbackClose}
           messageId={feedbackMessageId}
           conversationId={conversationId}
-          primaryColor={primaryColor}
+          primaryColor={theme.primaryColor}
           onSubmitFeedback={handleFeedbackSubmit}
         />
       )}

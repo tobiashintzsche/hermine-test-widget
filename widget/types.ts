@@ -34,6 +34,7 @@ export interface WidgetConfig {
   aiMessageBackgroundColor?: string;
   aiMessageTextColor?: string;
   messageBackgroundColor?: string;
+  messageTextColor?: string;
   buttonBackgroundColor?: string;
   buttonColor?: string;
 

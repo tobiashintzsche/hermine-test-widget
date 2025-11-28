@@ -1,69 +1,30 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import type { WidgetConfig } from "./types";
 import { useTheme } from "./hooks";
 import { FloatingButton, ChatWindow } from "./components";
+import { ThemeProvider } from "./theme";
 import {
-  DEFAULT_PRIMARY_COLOR,
   DEFAULT_API_ENDPOINT,
   DEFAULT_POSITION,
   DEFAULT_SPACING,
   WIDGET_Z_INDEX,
 } from "./constants";
 
-// Helper to get shadow style
-function getShadowStyle(
-  shadow?: "none" | "small" | "medium" | "large"
-): string {
-  switch (shadow) {
-    case "none":
-      return "none";
-    case "small":
-      return "0 2px 8px rgba(0, 0, 0, 0.1)";
-    case "medium":
-      return "0 4px 12px rgba(0, 0, 0, 0.15)";
-    case "large":
-      return "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)";
-    default:
-      return "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)";
-  }
-}
+export function ChatWidget(config: WidgetConfig) {
+  const {
+    accountId,
+    agentSlug,
+    apiEndpoint,
+    target,
+    primaryColor,
+    position,
+    location,
+    spacing = DEFAULT_SPACING,
+    spacingRight,
+    spacingBottom,
+    fontFamily,
+  } = config;
 
-export function ChatWidget({
-  accountId,
-  agentSlug,
-  apiEndpoint,
-  target,
-  primaryColor = DEFAULT_PRIMARY_COLOR,
-  chatTitle,
-  chatTitleColor,
-  chatSubTitle,
-  chatSubTitleColor,
-  chatDescription,
-  chatDescriptionColor,
-  chatBackgroundColor,
-  fontFamily,
-  floatingButtonBackgroundColor,
-  floatingButtonIconColor,
-  floatingButtonBorderColor,
-  floatingButtonWidth,
-  floatingButtonHeight,
-  floatingButtonIcon,
-  aiMessageBackgroundColor,
-  aiMessageTextColor,
-  messageBackgroundColor,
-  buttonBackgroundColor,
-  buttonColor,
-  position,
-  location,
-  spacing = DEFAULT_SPACING,
-  spacingRight,
-  spacingBottom,
-  fullScreenEnabled,
-  shadow,
-  textInputPlaceholder,
-  useCustomLogo,
-  showConversationManagment,
-}: WidgetConfig) {
   const [isOpen, setIsOpen] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
 
@@ -81,21 +42,24 @@ export function ChatWidget({
 
   // Resolve spacing from spacingRight/spacingBottom or spacing object
   const effectiveSpacing = {
-    bottom: spacingBottom || spacing.bottom || DEFAULT_SPACING.bottom,
-    right: spacingRight || spacing.right || DEFAULT_SPACING.right,
-    left: spacing.left,
+    bottom: spacingBottom || spacing?.bottom || DEFAULT_SPACING.bottom,
+    right: spacingRight || spacing?.right || DEFAULT_SPACING.right,
+    left: (spacing as { left?: string })?.left,
   };
 
-  const { effectiveColor, aiIcon, imageLoaded, logoUrl } = useTheme({
+  // Lade Theme-Daten von API
+  const { theme: apiTheme, imageLoaded } = useTheme({
     accountId,
     agentSlug,
     apiEndpoint: effectiveApiEndpoint,
     fallbackColor: primaryColor,
   });
 
-  // Titel-Farbe: chatTitleColor oder Primary-Farbe
-  const effectiveTitleColor = chatTitleColor || effectiveColor;
-  const effectiveSubTitleColor = chatSubTitleColor || "#6B7280";
+  // Memoized config für ThemeProvider (mit aufgelöstem apiEndpoint)
+  const themeConfig = useMemo(
+    () => ({ ...config, apiEndpoint: effectiveApiEndpoint }),
+    [config, effectiveApiEndpoint]
+  );
 
   const containerStyle: React.CSSProperties = {
     position: "fixed",
@@ -116,51 +80,24 @@ export function ChatWidget({
   };
 
   return (
-    <div style={containerStyle}>
-      {isOpen && (
-        <ChatWindow
-          accountId={accountId}
-          agentSlug={agentSlug}
-          apiEndpoint={effectiveApiEndpoint}
-          primaryColor={effectiveColor}
-          chatTitle={chatTitle}
-          chatTitleColor={effectiveTitleColor}
-          chatSubTitle={chatSubTitle}
-          chatSubTitleColor={effectiveSubTitleColor}
-          chatDescription={chatDescription}
-          chatDescriptionColor={chatDescriptionColor}
-          chatBackgroundColor={chatBackgroundColor}
-          fontFamily={fontFamily}
-          aiMessageBackgroundColor={aiMessageBackgroundColor}
-          aiMessageTextColor={aiMessageTextColor}
-          messageBackgroundColor={messageBackgroundColor}
-          buttonBackgroundColor={buttonBackgroundColor}
-          buttonColor={buttonColor}
-          fullScreenEnabled={fullScreenEnabled}
-          isFullScreen={isFullScreen}
-          onToggleFullScreen={() => setIsFullScreen(!isFullScreen)}
-          shadow={shadow}
-          textInputPlaceholder={textInputPlaceholder}
-          useCustomLogo={useCustomLogo}
-          showConversationManagment={showConversationManagment}
-          onClose={() => setIsOpen(false)}
-          aiIcon={aiIcon}
-          logoUrl={logoUrl}
+    <ThemeProvider config={themeConfig} apiTheme={apiTheme}>
+      <div style={containerStyle}>
+        {isOpen && (
+          <ChatWindow
+            accountId={accountId}
+            agentSlug={agentSlug}
+            apiEndpoint={effectiveApiEndpoint}
+            isFullScreen={isFullScreen}
+            onToggleFullScreen={() => setIsFullScreen(!isFullScreen)}
+            onClose={() => setIsOpen(false)}
+          />
+        )}
+        <FloatingButton
+          isOpen={isOpen}
+          onClick={() => setIsOpen(!isOpen)}
+          imageLoaded={imageLoaded}
         />
-      )}
-      <FloatingButton
-        isOpen={isOpen}
-        onClick={() => setIsOpen(!isOpen)}
-        primaryColor={effectiveColor}
-        aiIcon={aiIcon}
-        imageLoaded={imageLoaded}
-        backgroundColor={floatingButtonBackgroundColor}
-        iconColor={floatingButtonIconColor}
-        borderColor={floatingButtonBorderColor}
-        width={floatingButtonWidth}
-        height={floatingButtonHeight}
-        iconType={floatingButtonIcon}
-      />
-    </div>
+      </div>
+    </ThemeProvider>
   );
 }

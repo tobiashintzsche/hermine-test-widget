@@ -28,6 +28,7 @@ interface MessageBubbleProps {
   aiMessageBackgroundColor?: string;
   aiMessageTextColor?: string;
   userMessageBackgroundColor?: string;
+  userMessageTextColor?: string;
 }
 
 export function MessageBubble({
@@ -39,6 +40,7 @@ export function MessageBubble({
   aiMessageBackgroundColor,
   aiMessageTextColor,
   userMessageBackgroundColor,
+  userMessageTextColor,
 }: MessageBubbleProps) {
   const isUser = message.role === "user";
   const [feedbackButtonHovered, setFeedbackButtonHovered] = useState(false);
@@ -301,12 +303,9 @@ export function MessageBubble({
   }
 
   // Human/User Message
-  // Use userMessageBackgroundColor or primaryColor for user messages
-  const effectiveUserBgColor = userMessageBackgroundColor || primaryColor;
-
   return (
     <div style={humanMessageContainerStyle}>
-      <div style={createHumanMessageStyle(effectiveUserBgColor, "white")}>
+      <div style={createHumanMessageStyle(userMessageBackgroundColor, userMessageTextColor)}>
         <div style={humanTextStyle}>
           {message.content.split("\n").map((line, i) => (
             <React.Fragment key={i}>
