@@ -166,7 +166,8 @@ export function resolveTheme(
       subtitle: config.chatSubTitle,
       subtitleColor: config.chatSubTitleColor || DEFAULTS.subtitleColor,
       description: config.chatDescription,
-      descriptionColor: config.chatDescriptionColor || DEFAULTS.descriptionColor,
+      descriptionColor:
+        config.chatDescriptionColor || DEFAULTS.descriptionColor,
       logoUrl: apiTheme?.logo,
       showLogo: config.useCustomLogo !== true,
     },
@@ -179,8 +180,7 @@ export function resolveTheme(
     },
 
     floatingButton: {
-      backgroundColor:
-        config.floatingButtonBackgroundColor || primaryColor,
+      backgroundColor: config.floatingButtonBackgroundColor || primaryColor,
       iconColor: config.floatingButtonIconColor || DEFAULTS.buttonText,
       borderColor: config.floatingButtonBorderColor,
       width: config.floatingButtonWidth || DEFAULTS.floatingButtonSize,
@@ -195,7 +195,8 @@ export function resolveTheme(
         textColor: config.aiMessageTextColor || DEFAULTS.aiMessageText,
       },
       user: {
-        backgroundColor: config.messageBackgroundColor || DEFAULTS.userMessageBg,
+        backgroundColor:
+          config.messageBackgroundColor || DEFAULTS.userMessageBg,
         textColor: config.messageTextColor || DEFAULTS.userMessageText,
       },
     },

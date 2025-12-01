@@ -25,9 +25,13 @@ export const WIDGET_Z_INDEX = 9999;
 // Animation Durations
 export const ANIMATION_DURATION_MS = 200;
 export const FADE_DURATION_MS = 300;
+export const AUTO_SCROLL_DELAY = 200;
+
+// Textarea Configuration
+export const TEXTAREA_MAX_HEIGHT = 96; // 4 Zeilen in px
 
 // Button Dimensions
-export const FLOATING_BUTTON_SIZE = 70;
+export const FLOATING_BUTTON_SIZE = 60;
 export const SEND_BUTTON_SIZE = 48;
 export const AVATAR_SIZE = 40;
 

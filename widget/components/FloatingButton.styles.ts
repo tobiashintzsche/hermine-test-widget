@@ -26,17 +26,18 @@ export interface FloatingButtonStyleConfig {
 // ============================================
 
 export function resolveFloatingButtonColors(theme: ResolvedTheme) {
-  const aiIcon = theme.assets.aiIcon;
-  const showImage = theme.floatingButton.icon === "image" && aiIcon;
+  // Verwende logo statt ai_icon für den FloatingButton
+  const buttonImage = theme.assets.logo;
+  const showImage = theme.floatingButton.icon === "image" && buttonImage;
 
   const backgroundColor = showImage
     ? theme.floatingButton.backgroundColor
     : theme.floatingButton.backgroundColor ||
-      (aiIcon ? "white" : theme.primaryColor);
+      (buttonImage ? "white" : theme.primaryColor);
 
   const iconColor =
     theme.floatingButton.iconColor ||
-    (aiIcon ? theme.primaryColor : "white");
+    (buttonImage ? theme.primaryColor : "white");
 
   const borderColor = theme.floatingButton.borderColor || theme.primaryColor;
 
@@ -45,7 +46,7 @@ export function resolveFloatingButtonColors(theme: ResolvedTheme) {
     iconColor,
     borderColor,
     showImage: !!showImage,
-    aiIcon,
+    buttonImage,
   };
 }
 
@@ -76,7 +77,9 @@ export function calculateButtonSize(theme: ResolvedTheme) {
 // Button Styles
 // ============================================
 
-export function createButtonStyle(config: FloatingButtonStyleConfig): React.CSSProperties {
+export function createButtonStyle(
+  config: FloatingButtonStyleConfig
+): React.CSSProperties {
   const { theme, showButton, showImage, hasAiIcon } = config;
   const colors = resolveFloatingButtonColors(theme);
   const sizes = calculateButtonSize(theme);
@@ -109,11 +112,12 @@ export function createButtonStyle(config: FloatingButtonStyleConfig): React.CSSP
 // ============================================
 
 export function createAvatarStyle(theme: ResolvedTheme): React.CSSProperties {
-  const sizes = calculateButtonSize(theme);
+  // Bild etwas kleiner als Button für bessere Passform im runden Button
+  const imageSize = "100%";
 
   return {
-    width: sizes.width,
-    height: sizes.height,
+    width: imageSize,
+    height: imageSize,
     objectFit: "cover",
     borderRadius: "50%",
   };

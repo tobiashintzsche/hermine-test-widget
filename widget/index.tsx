@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { ChatWidget } from "./ChatWidget";
 import type { WidgetConfig } from "./types";
 import "./styles.css";
+import "./i18n"; // i18n Initialisierung
 
 /**
  * Initialisiert das Hermine Chat Widget

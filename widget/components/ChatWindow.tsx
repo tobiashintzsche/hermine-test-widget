@@ -1,46 +1,59 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+/**
+ * ChatWindow Komponente (Refactored)
+ *
+ * Haupt-Chat-Fenster, das kleinere Komponenten orchestriert.
+ * Folgt dem SRP durch Delegation an spezialisierte Sub-Komponenten.
+ */
+
+import React, { useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import type { ApiConfig } from "../types";
-import { useConversation } from "../hooks/useConversation";
+import type { UseConversationReturn } from "../hooks/useConversation";
 import { useResolvedTheme } from "../theme";
+import { useAutoScroll, useChatForm } from "../hooks";
 import { submitMessageFeedback } from "../services/api";
-import { MessageBubble } from "./MessageBubble";
-import { LoadingDots } from "./LoadingDots";
-import { Icon } from "./Icon";
+
+// Components
+import { ChatHeader } from "./ChatHeader";
+import { ChatInputForm } from "./ChatInputForm";
+import { ErrorBanner } from "./ErrorBanner";
+import { SplashScreen } from "./SplashScreen";
+import { MessageList } from "./MessageList";
 import { FeedbackDialog } from "./FeedbackDialog";
-import {
-  windowStyle,
-  chatContainerStyle,
-  messagesContainerStyle,
-  topContainerStyle,
-  headerContainerStyle,
-  rightSectionStyle,
-  titleSectionStyle,
-  logoStyle,
-  createTitleStyle,
-  createSubTitleStyle,
-  closeButtonStyle,
-  errorBannerStyle,
-  errorCloseButtonStyle,
-  splashScreenStyle,
-  splashTextStyle,
-  promptsContainerStyle,
-  promptButtonStyle,
-  promptButtonHoverBg,
-  promptButtonDefaultBg,
-  formContainerStyle,
-  formStyle,
-  textareaStyle,
-  createSendButtonStyle,
-  resetButtonContainerStyle,
-  resetButtonStyle,
-  loadingBubbleStyle,
-} from "./ChatWindow.styles";
+
+// Styles
+import { windowStyle, chatContainerStyle } from "./ChatWindow.styles";
+
+// ============================================
+// Types
+// ============================================
 
 interface ChatWindowProps extends ApiConfig {
   isFullScreen?: boolean;
   onToggleFullScreen?: () => void;
   onClose: () => void;
+  conversation: UseConversationReturn;
 }
+
+// ============================================
+// Styles Helper
+// ============================================
+
+function createFullScreenStyle(): React.CSSProperties {
+  return {
+    width: "80vw",
+    maxWidth: "80vw",
+    height: "70vh",
+    maxHeight: "80vh",
+    borderRadius: "8px",
+    boxShadow: "rgba(0, 0, 0, 0.25) 0px 25px 50px -12px",
+    zIndex: 9999,
+  };
+}
+
+// ============================================
+// Main Component
+// ============================================
 
 export function ChatWindow({
   accountId,
@@ -49,18 +62,20 @@ export function ChatWindow({
   isFullScreen,
   onToggleFullScreen,
   onClose,
+  conversation,
 }: ChatWindowProps) {
-  // Theme aus Context holen
+  // i18n
+  const { t } = useTranslation();
+
+  // Theme
   const theme = useResolvedTheme();
 
-  const [input, setInput] = useState("");
+  // Feedback State
   const [feedbackMessageId, setFeedbackMessageId] = useState<string | null>(
     null
   );
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Destructure conversation
   const {
     messages,
     conversationId,
@@ -70,15 +85,52 @@ export function ChatWindow({
     imageUrl,
     inputPlaceholder,
     error,
+    isStreaming,
+    streamingMessageId,
     sendMessage,
     clearError,
     resetConversation,
-  } = useConversation({ accountId, agentSlug, apiEndpoint });
+  } = conversation;
 
-  // aiIcon von Theme nutzen falls vorhanden, sonst von Conversation
-  const effectiveImageUrl = theme.assets.aiIcon || imageUrl;
+  // Auto-scroll Hook
+  const { containerRef, endRef, scrollToEnd } = useAutoScroll({
+    dependency: messages.length,
+  });
 
-  // Feedback Handler
+  // Form Hook
+  const form = useChatForm({
+    onSubmit: async (content) => {
+      await sendMessage(content);
+      scrollToEnd();
+    },
+    isDisabled: isLoading || isInitializing,
+  });
+
+  // ============================================
+  // Handlers
+  // ============================================
+
+  const handlePromptClick = useCallback(
+    async (prompt: string) => {
+      await sendMessage(prompt);
+      scrollToEnd();
+    },
+    [sendMessage, scrollToEnd]
+  );
+
+  const handleResetChat = useCallback(() => {
+    resetConversation();
+    onClose();
+  }, [resetConversation, onClose]);
+
+  const handleFeedbackClick = useCallback((messageId: string) => {
+    setFeedbackMessageId(messageId);
+  }, []);
+
+  const handleFeedbackClose = useCallback(() => {
+    setFeedbackMessageId(null);
+  }, []);
+
   const handleFeedbackSubmit = useCallback(
     async (
       messageId: string,
@@ -93,349 +145,97 @@ export function ChatWindow({
           feedback
         );
         return true;
-      } catch (error) {
-        console.error("Failed to submit feedback:", error);
+      } catch (err) {
+        console.error("Failed to submit feedback:", err);
         return false;
       }
     },
     [accountId, agentSlug, apiEndpoint]
   );
 
-  // Feedback Dialog öffnen
-  const handleFeedbackClick = useCallback((messageId: string) => {
-    setFeedbackMessageId(messageId);
-  }, []);
+  // ============================================
+  // Derived State
+  // ============================================
 
-  // Feedback Dialog schließen
-  const handleFeedbackClose = useCallback(() => {
-    setFeedbackMessageId(null);
-  }, []);
+  const effectiveImageUrl = imageUrl || theme.assets.aiIcon;
+  const effectivePlaceholder =
+    theme.input.placeholder || inputPlaceholder || t("input.placeholder");
 
-  // Auto-scroll zu neuen Nachrichten
-  const scrollToLastMessage = () => {
-    messagesContainerRef.current?.scrollTo({ top: 9999, behavior: "smooth" });
-  };
-
-  useEffect(() => {
-    setTimeout(scrollToLastMessage, 200);
-  }, [messages]);
-
-  // Funktion zur automatischen Anpassung der Textarea-Höhe
-  const adjustTextareaHeight = () => {
-    const textarea = textareaRef.current;
-    if (textarea) {
-      textarea.style.height = "auto";
-      const scrollHeight = textarea.scrollHeight;
-      const maxHeight = 96; // Maximale Höhe in px (4 Zeilen)
-      const newHeight = Math.min(scrollHeight, maxHeight);
-      textarea.style.height = `${newHeight}px`;
-
-      // Overflow-Verhalten basierend auf der Höhe anpassen
-      if (scrollHeight > maxHeight) {
-        textarea.style.overflowY = "auto";
-      } else {
-        textarea.style.overflowY = "hidden";
-      }
-    }
-  };
-
-  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInput(e.target.value);
-    adjustTextareaHeight();
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit(e as any);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim()) return;
-
-    const content = input;
-    setInput("");
-
-    // Textarea-Höhe und Overflow nach dem Leeren zurücksetzen
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      textareaRef.current.style.overflowY = "hidden";
-    }
-
-    await sendMessage(content);
-    setTimeout(scrollToLastMessage, 200);
-  };
-
-  const handlePromptClick = async (prompt: string) => {
-    await sendMessage(prompt);
-    setTimeout(scrollToLastMessage, 200);
-  };
-
-  const handleResetChat = (e: React.MouseEvent) => {
-    e.preventDefault();
-    resetConversation();
-    onClose();
-  };
-
-  const isSubmitDisabled = isLoading || !input.trim();
-
-  // Erste Nachricht (Welcome Message) und Prompts für SplashScreen
   const firstMessage = messages.find((m) => m.isWelcome);
   const showSplashScreen = messages.length <= 1 && !isLoading;
 
-  // Effective placeholder - from theme or API
-  const effectivePlaceholder =
-    theme.input.placeholder || inputPlaceholder || "Nachricht eingeben...";
+  // ============================================
+  // Dynamic Styles
+  // ============================================
 
-  // Dynamic window style with theme values
   const dynamicWindowStyle: React.CSSProperties = {
     ...windowStyle,
     backgroundColor: theme.window.backgroundColor,
     fontFamily: theme.window.fontFamily,
     boxShadow: theme.window.shadow,
-    ...(isFullScreen && {
-      width: "100vw",
-      maxWidth: "100vw",
-      height: "100vh",
-      maxHeight: "100vh",
-      minHeight: "100vh",
-      borderRadius: 0,
-      position: "fixed" as const,
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-    }),
+    ...(isFullScreen && createFullScreenStyle()),
   };
+
+  // ============================================
+  // Render
+  // ============================================
 
   return (
     <div style={dynamicWindowStyle}>
       <div style={chatContainerStyle}>
-        {/* Header (topContainer) */}
-        <div style={topContainerStyle}>
-          <div style={headerContainerStyle}>
-            {/* Left side: Logo */}
-            {theme.header.logoUrl && theme.header.showLogo && (
-              <img src={theme.header.logoUrl} alt="Logo" style={logoStyle} />
-            )}
-
-            {/* Right side: Fullscreen + Close Button */}
-            <div style={rightSectionStyle}>
-              {theme.features.fullScreenEnabled && (
-                <button
-                  onClick={onToggleFullScreen}
-                  style={closeButtonStyle}
-                  aria-label={
-                    isFullScreen ? "Vollbild beenden" : "Vollbild aktivieren"
-                  }
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor =
-                      "rgb(243, 244, 246)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = "transparent";
-                  }}
-                >
-                  <Icon
-                    name={isFullScreen ? "minimize" : "maximize"}
-                    size={20}
-                  />
-                </button>
-              )}
-              <button
-                onClick={onClose}
-                style={closeButtonStyle}
-                aria-label="Chat schließen"
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = "rgb(243, 244, 246)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "transparent";
-                }}
-              >
-                <Icon name="close" size={24} />
-              </button>
-            </div>
-          </div>
-
-          {/* Title Section */}
-          {(theme.header.title || theme.header.subtitle || theme.header.description) && (
-            <div style={titleSectionStyle}>
-              {theme.header.title && (
-                <div style={createTitleStyle(theme.header.titleColor)}>
-                  {theme.header.title}
-                </div>
-              )}
-              {theme.header.subtitle && (
-                <div style={createSubTitleStyle(theme.header.subtitleColor)}>
-                  {theme.header.subtitle}
-                </div>
-              )}
-              {theme.header.description && (
-                <div
-                  style={{
-                    fontSize: "14px",
-                    lineHeight: 1.5,
-                    color: theme.header.descriptionColor,
-                    marginTop: "8px",
-                  }}
-                >
-                  {theme.header.description}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        {/* Header */}
+        <ChatHeader
+          isFullScreen={isFullScreen}
+          onToggleFullScreen={onToggleFullScreen}
+          onClose={onClose}
+        />
 
         {/* Error Banner */}
-        {error && (
-          <div style={errorBannerStyle}>
-            <span>{error}</span>
-            <button
-              onClick={clearError}
-              style={errorCloseButtonStyle}
-              aria-label="Fehler schließen"
-            >
-              <Icon name="close" size={16} />
-            </button>
-          </div>
-        )}
+        {error && <ErrorBanner message={error} onClose={clearError} />}
 
-        {/* SplashScreen with Welcome Message and Prompts OR Messages */}
+        {/* Content: SplashScreen or Messages */}
         {showSplashScreen ? (
-          <div style={splashScreenStyle}>
-            <div>
-              {firstMessage && (
-                <div style={splashTextStyle}>
-                  <p>{firstMessage.content}</p>
-                </div>
-              )}
-              {prompts && prompts.length > 0 && (
-                <div style={promptsContainerStyle}>
-                  {prompts
-                    .filter((prompt: string) => !!prompt)
-                    .map((prompt: string) => (
-                      <button
-                        key={prompt}
-                        style={promptButtonStyle}
-                        onClick={() => handlePromptClick(prompt)}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor =
-                            promptButtonHoverBg;
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor =
-                            promptButtonDefaultBg;
-                        }}
-                      >
-                        {prompt}
-                      </button>
-                    ))}
-                </div>
-              )}
-            </div>
-          </div>
+          <SplashScreen
+            welcomeMessage={firstMessage?.content}
+            prompts={prompts}
+            onPromptClick={handlePromptClick}
+          />
         ) : (
-          <div ref={messagesContainerRef} style={messagesContainerStyle}>
-            {isInitializing && (
-              <div
-                style={{
-                  textAlign: "center",
-                  color: "#6b7280",
-                  marginTop: "40px",
-                }}
-              >
-                <LoadingDots />
-              </div>
-            )}
-
-            {messages.map((message) => (
-              <MessageBubble
-                key={message.id}
-                message={message}
-                primaryColor={theme.primaryColor}
-                imageUrl={
-                  message.role === "assistant" ? effectiveImageUrl : undefined
-                }
-                conversationId={conversationId || undefined}
-                onFeedbackClick={handleFeedbackClick}
-                aiMessageBackgroundColor={theme.messages.ai.backgroundColor}
-                aiMessageTextColor={theme.messages.ai.textColor}
-                userMessageBackgroundColor={theme.messages.user.backgroundColor}
-                userMessageTextColor={theme.messages.user.textColor}
-              />
-            ))}
-
-            {isLoading && (
-              <div style={loadingBubbleStyle}>
-                <LoadingDots />
-              </div>
-            )}
-
-            <div ref={messagesEndRef} />
-          </div>
+          <MessageList
+            messages={messages}
+            conversationId={conversationId}
+            imageUrl={effectiveImageUrl}
+            isLoading={isLoading}
+            isInitializing={isInitializing}
+            isStreaming={isStreaming}
+            streamingMessageId={streamingMessageId}
+            containerRef={containerRef}
+            endRef={endRef}
+            onFeedbackClick={handleFeedbackClick}
+          />
         )}
 
         {/* Input Form */}
-        <div style={formContainerStyle}>
-          <form onSubmit={handleSubmit} style={formStyle}>
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={handleTextareaChange}
-              onKeyDown={handleKeyDown}
-              placeholder={effectivePlaceholder}
-              style={textareaStyle}
-              disabled={isLoading || isInitializing}
-              rows={1}
-            />
-            <button
-              type="submit"
-              disabled={isSubmitDisabled}
-              style={{
-                ...createSendButtonStyle(
-                  theme.buttons.primary.backgroundColor,
-                  isSubmitDisabled
-                ),
-                color: theme.buttons.primary.textColor,
-              }}
-              aria-label="Nachricht senden"
-            >
-              <Icon name="send" size={24} />
-            </button>
-          </form>
-          {theme.features.showConversationManagement && (
-            <div style={resetButtonContainerStyle}>
-              <button
-                type="button"
-                onClick={handleResetChat}
-                style={resetButtonStyle}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.opacity = "0.9";
-                  e.currentTarget.style.textDecoration = "underline";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.opacity = "1";
-                  e.currentTarget.style.textDecoration = "none";
-                }}
-              >
-                Neues Gespräch
-              </button>
-            </div>
-          )}
-        </div>
+        <ChatInputForm
+          input={form.input}
+          textareaRef={form.textareaRef}
+          placeholder={effectivePlaceholder}
+          isDisabled={isLoading || isInitializing}
+          isSubmitDisabled={form.isSubmitDisabled}
+          onChange={form.handleChange}
+          onKeyDown={form.handleKeyDown}
+          onSubmit={form.handleSubmit}
+          onReset={handleResetChat}
+        />
       </div>
 
-      {/* Feedback Dialog - positioned within the chat window */}
+      {/* Feedback Dialog */}
       {feedbackMessageId && conversationId && (
         <FeedbackDialog
           isOpen={!!feedbackMessageId}
           onClose={handleFeedbackClose}
           messageId={feedbackMessageId}
           conversationId={conversationId}
-          primaryColor={theme.primaryColor}
           onSubmitFeedback={handleFeedbackSubmit}
         />
       )}

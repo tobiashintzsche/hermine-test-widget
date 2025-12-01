@@ -29,7 +29,7 @@ export const windowStyle: React.CSSProperties = {
   flexDirection: "column",
   overflow: "hidden",
   position: "relative",
-  animation: "fadeInFromNone 0.5s ease-out",
+  animation: "hermine-widget-fadeIn 0.5s ease-out",
 };
 
 export const chatContainerStyle: React.CSSProperties = {
@@ -56,6 +56,7 @@ export const messagesContainerStyle: React.CSSProperties = {
 export const topContainerStyle: React.CSSProperties = {
   display: "flex",
   flexDirection: "column",
+  gap: "16px",
   padding: "24px 20px",
   backgroundColor: "white",
   borderBottom: "1px solid rgb(229, 231, 235)",
@@ -112,7 +113,6 @@ export const createSubTitleStyle = (
 ): React.CSSProperties => ({
   fontSize: "16px",
   lineHeight: 1.4,
-  marginBottom: "8px",
   fontWeight: 500,
   textAlign: "left",
   color: subTitleColor || "#6B7280",
@@ -229,7 +229,7 @@ export const promptButtonDefaultBg = "transparent";
 // ============================================
 
 export const formContainerStyle: React.CSSProperties = {
-  padding: "16px",
+  padding: "24px",
   paddingBottom: "16px",
   width: "100%",
   flexDirection: "column",
@@ -402,7 +402,7 @@ export const createLoadingSpinnerStyle = (
   height: "40px",
   border: `4px dashed ${borderColor || "black"}`,
   borderRadius: "9999px",
-  animation: "spin 1s linear infinite",
+  animation: "hermine-widget-spin 1s linear infinite",
   margin: "16px",
 });
 
@@ -683,4 +683,16 @@ export const feedbackDialogRetryButtonStyle: React.CSSProperties = {
   fontSize: "14px",
   cursor: "pointer",
   transition: "background-color 0.2s",
+};
+
+// ============================================
+// Streaming Cursor Style
+// ============================================
+
+export const streamingCursorStyle: React.CSSProperties = {
+  display: "inline-block",
+  marginLeft: "2px",
+  animation: "hermine-widget-blink 1s step-end infinite",
+  color: "#6b7280",
+  fontWeight: "normal",
 };

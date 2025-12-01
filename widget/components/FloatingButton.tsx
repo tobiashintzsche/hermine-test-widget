@@ -1,5 +1,5 @@
 import React from "react";
-import { Icon } from "./Icon";
+import { MessageCircle } from "lucide-react";
 import { useResolvedTheme } from "../theme";
 import {
   createButtonStyle,
@@ -13,12 +13,14 @@ interface FloatingButtonProps {
   isOpen: boolean;
   onClick: () => void;
   imageLoaded?: boolean;
+  imageUrl?: string;
 }
 
 export function FloatingButton({
   isOpen,
   onClick,
   imageLoaded,
+  imageUrl,
 }: FloatingButtonProps) {
   const theme = useResolvedTheme();
 
@@ -29,12 +31,16 @@ export function FloatingButton({
   const colors = resolveFloatingButtonColors(theme);
   const sizes = calculateButtonSize(theme);
 
+  // NUR imageUrl aus Conversation verwenden (Agent's ai_icon)
+  const effectiveImageUrl = imageUrl;
+  const showImage = theme.floatingButton.icon === "image" && effectiveImageUrl;
+
   // Get styles
   const buttonStyle = createButtonStyle({
     theme,
     showButton,
-    showImage: colors.showImage,
-    hasAiIcon: !!colors.aiIcon,
+    showImage: !!showImage,
+    hasAiIcon: !!effectiveImageUrl,
   });
   const avatarStyle = createAvatarStyle(theme);
 
@@ -46,12 +52,12 @@ export function FloatingButton({
       onMouseLeave={hoverHandlers.onMouseLeave}
       aria-label={isOpen ? "Chat schließen" : "Chat öffnen"}
     >
-      {colors.showImage && colors.aiIcon ? (
-        <img src={colors.aiIcon} alt="Chat" style={avatarStyle} />
-      ) : colors.aiIcon && theme.floatingButton.icon !== "chat" ? (
-        <img src={colors.aiIcon} alt="Chat" style={avatarStyle} />
+      {showImage && effectiveImageUrl ? (
+        <img src={effectiveImageUrl} alt="Chat" style={avatarStyle} />
+      ) : effectiveImageUrl && theme.floatingButton.icon !== "chat" ? (
+        <img src={effectiveImageUrl} alt="Chat" style={avatarStyle} />
       ) : (
-        <Icon name="chat" size={sizes.iconSize} color={colors.iconColor} />
+        <MessageCircle size={sizes.iconSize} color={colors.iconColor} />
       )}
     </button>
   );

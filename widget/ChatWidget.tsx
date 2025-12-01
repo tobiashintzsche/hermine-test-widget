@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import type { WidgetConfig } from "./types";
-import { useTheme } from "./hooks";
+import { useTheme, useConversation } from "./hooks";
 import { FloatingButton, ChatWindow } from "./components";
 import { ThemeProvider } from "./theme";
 import {
@@ -55,6 +55,13 @@ export function ChatWidget(config: WidgetConfig) {
     fallbackColor: primaryColor,
   });
 
+  // Conversation State auf Widget-Ebene für imageUrl im FloatingButton
+  const conversation = useConversation({
+    accountId,
+    agentSlug,
+    apiEndpoint: effectiveApiEndpoint,
+  });
+
   // Memoized config für ThemeProvider (mit aufgelöstem apiEndpoint)
   const themeConfig = useMemo(
     () => ({ ...config, apiEndpoint: effectiveApiEndpoint }),
@@ -90,12 +97,14 @@ export function ChatWidget(config: WidgetConfig) {
             isFullScreen={isFullScreen}
             onToggleFullScreen={() => setIsFullScreen(!isFullScreen)}
             onClose={() => setIsOpen(false)}
+            conversation={conversation}
           />
         )}
         <FloatingButton
           isOpen={isOpen}
           onClick={() => setIsOpen(!isOpen)}
-          imageLoaded={imageLoaded}
+          imageLoaded={!conversation.isInitializing}
+          imageUrl={conversation.imageUrl}
         />
       </div>
     </ThemeProvider>

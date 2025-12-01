@@ -12,17 +12,23 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@rails/actioncable": "^8.1.100",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "i18next": "^25.6.3",
+    "i18next-browser-languagedetector": "^8.2.0",
+    "lucide-react": "^0.555.0",
     "next": "^16.0.5",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-i18next": "^16.3.5",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
     "tailwind-merge": "^3.0.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
+    "@types/rails__actioncable": "^8.0.3",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
     "autoprefixer": "^10.4.20",

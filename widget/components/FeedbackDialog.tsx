@@ -6,7 +6,8 @@
  */
 
 import React, { useState } from "react";
-import { Icon } from "./Icon";
+import { useTranslation } from "react-i18next";
+import { useResolvedTheme } from "../theme/ThemeContext";
 import {
   feedbackDialogOverlayStyle,
   feedbackDialogStyle,
@@ -35,7 +36,6 @@ export interface FeedbackDialogProps {
   onClose: () => void;
   messageId: string;
   conversationId: string;
-  primaryColor: string;
   onSubmitFeedback: (
     messageId: string,
     conversationId: string,
@@ -48,9 +48,11 @@ export function FeedbackDialog({
   onClose,
   messageId,
   conversationId,
-  primaryColor,
   onSubmitFeedback,
 }: FeedbackDialogProps) {
+  const { t } = useTranslation();
+  const theme = useResolvedTheme();
+  const primaryColor = theme.primaryColor;
   const [comment, setComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<
@@ -108,7 +110,7 @@ export function FeedbackDialog({
       >
         <div style={feedbackDialogHeaderStyle}>
           <span style={{ ...feedbackDialogTitleStyle, color: primaryColor }}>
-            Feedback
+            {t("feedback.title")}
           </span>
           <button
             style={feedbackDialogCloseButtonStyle}
@@ -132,41 +134,39 @@ export function FeedbackDialog({
             <div style={feedbackDialogSuccessStyle}>
               <div style={feedbackDialogSuccessIconStyle}>✓</div>
               <p style={feedbackDialogSuccessTextStyle}>
-                Feedback erfolgreich gesendet!
+                {t("feedback.successTitle")}
               </p>
               <p style={feedbackDialogSuccessSubtextStyle}>
-                Vielen Dank für Ihr Feedback.
+                {t("feedback.successMessage")}
               </p>
             </div>
           ) : submitStatus === "error" ? (
             <div style={feedbackDialogErrorStyle}>
               <div style={feedbackDialogErrorIconStyle}>⚠</div>
               <p style={feedbackDialogErrorTextStyle}>
-                Fehler beim Senden des Feedbacks
+                {t("feedback.errorTitle")}
               </p>
               <p style={feedbackDialogErrorSubtextStyle}>
-                Bitte versuchen Sie es erneut.
+                {t("feedback.errorMessage")}
               </p>
               <button
                 style={feedbackDialogRetryButtonStyle}
                 onClick={() => setSubmitStatus("idle")}
               >
-                Erneut versuchen
+                {t("feedback.retry")}
               </button>
             </div>
           ) : (
             <>
               <div style={{ marginBottom: "16px" }}>
                 <span style={feedbackDialogQuestionStyle}>
-                  Geben Sie Feedback zu dieser Nachricht. Service-Mitarbeiter
-                  und Administratoren des Kontos sehen Ihr Feedback und den
-                  Chat-Verlauf, um die KI zu verbessern.
+                  {t("feedback.question")}
                 </span>
               </div>
 
               <textarea
                 style={feedbackDialogTextareaStyle}
-                placeholder="Ihr Feedback..."
+                placeholder={t("feedback.placeholder")}
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 rows={4}
@@ -187,7 +187,7 @@ export function FeedbackDialog({
                     e.currentTarget.style.backgroundColor = "white";
                   }}
                 >
-                  Abbrechen
+                  {t("feedback.cancel")}
                 </button>
                 <button
                   style={createFeedbackDialogSubmitButtonStyle(
@@ -197,7 +197,7 @@ export function FeedbackDialog({
                   onClick={handleSubmit}
                   disabled={!comment.trim() || isSubmitting}
                 >
-                  {isSubmitting ? "Wird gesendet..." : "Senden"}
+                  {isSubmitting ? t("feedback.submitting") : t("feedback.submit")}
                 </button>
               </div>
             </>

@@ -94,6 +94,91 @@ export async function sendMessage(
 }
 
 /**
+ * Callback für Streaming-Updates
+ */
+export type StreamCallback = (chunk: string, fullText: string) => void;
+
+/**
+ * Sendet eine Nachricht mit Streaming-Response (SSE)
+ */
+export async function sendMessageStreaming(
+  config: ApiConfig,
+  conversationId: string,
+  content: string,
+  onChunk: StreamCallback,
+  onComplete?: (fullText: string) => void,
+  onError?: (error: Error) => void
+): Promise<void> {
+  try {
+    const response = await fetch(
+      `${config.apiEndpoint}/conversations/${conversationId}/messages/stream`,
+      {
+        method: "POST",
+        headers: {
+          ...createHeaders(config),
+          "Content-Type": "application/json",
+          Accept: "text/event-stream",
+        },
+        body: JSON.stringify({
+          message: { result: content },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to send message: ${response.statusText}`);
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error("No response body");
+    }
+
+    const decoder = new TextDecoder();
+    let fullText = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+
+      // Parse SSE data lines
+      const lines = chunk.split("\n");
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          const data = line.slice(6);
+          if (data === "[DONE]") {
+            onComplete?.(fullText);
+            return;
+          }
+          try {
+            const parsed = JSON.parse(data);
+            // Handle different SSE formats
+            const text =
+              parsed.content || parsed.text || parsed.delta?.content || data;
+            if (text && typeof text === "string") {
+              fullText += text;
+              onChunk(text, fullText);
+            }
+          } catch {
+            // Plain text chunk (not JSON)
+            if (data.trim()) {
+              fullText += data;
+              onChunk(data, fullText);
+            }
+          }
+        }
+      }
+    }
+
+    onComplete?.(fullText);
+  } catch (error) {
+    onError?.(error instanceof Error ? error : new Error(String(error)));
+  }
+}
+
+/**
  * Lädt das Theme/Branding für den Account
  */
 export async function fetchTheme(config: ApiConfig): Promise<ThemeResponse> {
